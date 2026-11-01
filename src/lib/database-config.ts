@@ -4,13 +4,14 @@ import type { PoolConfig } from "pg";
 export function validatedDatabaseUrl(value: string | undefined): URL {
   if (!value) throw new Error("DATABASE_URL is required");
   if (/[\u0000-\u0020\u007f]/.test(value)) throw new Error("DATABASE_URL contains unsupported characters");
+  if (/%(?![0-9a-fA-F]{2})|%00/i.test(value)) throw new Error("DATABASE_URL contains invalid encoding");
   let url: URL;
   try { url = new URL(value); } catch { throw new Error("DATABASE_URL must be a PostgreSQL URL"); }
   if (!["postgres:", "postgresql:"].includes(url.protocol)) {
     throw new Error("DATABASE_URL must be a PostgreSQL URL");
   }
   const params = url.searchParams;
-  const allowed = new Set(["sslmode", "sslrootcert", "schema", "connection_limit", "connect_timeout", "pool_timeout", "max_idle_connection_lifetime", "max_connection_lifetime", "pgbouncer", "application_name"]);
+  const allowed = new Set(["sslmode", "sslrootcert", "channel_binding", "schema", "connection_limit", "connect_timeout", "pool_timeout", "max_idle_connection_lifetime", "max_connection_lifetime", "pgbouncer", "application_name"]);
   if (!url.hostname || [...params.keys()].some(key => !allowed.has(key))) {
     throw new Error("DATABASE_URL has an unsupported connection option");
   }
@@ -22,12 +23,18 @@ export function validatedDatabaseUrl(value: string | undefined): URL {
     if (!ca || !isAbsolute(ca)) throw new Error("sslrootcert must be an absolute CA path");
     params.set("sslrootcert", resolve(ca));
   }
+  if (params.has("channel_binding") && params.get("channel_binding") !== "require") {
+    throw new Error("Only mandatory channel binding is supported when configured");
+  }
   const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   const mode = params.get("sslmode") ?? (local ? "disable" : "verify-full");
   if (params.has("ssl") || params.has("uselibpqcompat") || params.has("sslaccept") ||
       !["disable", "prefer", "require", "verify-ca", "verify-full"].includes(mode) ||
       (mode === "disable" && !local)) {
     throw new Error("DATABASE_URL must retain certificate verification; plaintext is loopback-only");
+  }
+  if (params.has("channel_binding") && mode === "disable") {
+    throw new Error("Mandatory channel binding requires TLS");
   }
   if (mode !== "disable" && process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
     throw new Error("TLS certificate verification must not be disabled");
@@ -49,7 +56,7 @@ export function prismaCliUrl(value: string): string {
   return url.toString();
 }
 
-export function databaseConfig(value: string | undefined): { pool: PoolConfig; schema: string } {
+export function databaseConfig(value: string | undefined): { pool: PoolConfig; schema: string; requiresChannelBinding: boolean } {
   const url = validatedDatabaseUrl(value);
   const params = url.searchParams;
   const number = (key: string, fallback: number, allowZero = false): number => {
@@ -72,7 +79,7 @@ export function databaseConfig(value: string | undefined): { pool: PoolConfig; s
   params.delete("schema");
   // The JS adapter uses unnamed statements by default, including behind PgBouncer.
   params.delete("pgbouncer");
-  return { schema, pool: {
+  return { schema, requiresChannelBinding: params.get("channel_binding") === "require", pool: {
     connectionString: url.toString(), max,
     // pg has a single connect/acquire timer; retain a bounded wait for both paths.
     connectionTimeoutMillis: Math.min(connect, acquire) * 1000,

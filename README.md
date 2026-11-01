@@ -52,7 +52,7 @@ CORS_ORIGIN=http://localhost:5173,https://todo-app-ten-rose-62.vercel.app
 ```json
 {
   "dev": "tsx watch src/index.ts",
-  "build": "prisma generate && tsc -p tsconfig.json",
+  "build": "prisma generate && tsc -p tsconfig.json && node scripts/write-native-ca.mjs && node scripts/check-native-runtime.mjs",
   "prisma:migrate": "prisma migrate deploy",
   "start": "node dist/index.js"
 }
@@ -99,4 +99,4 @@ git push
 
 ## Prisma 7移行候補
 
-現行のbuildはclient生成とTypeScript compile、startは `node dist/index.js`（自動migrationなし）です。Prisma 7候補の接続契約・検証・本番適合HOLDは [移行記録](docs/prisma7-migration-2026-11-01.md) とAGENTS.mdを参照してください。
+現行のbuildはclient生成とTypeScript compile、startは `node dist/index.js`（自動migrationなし）です。Prisma 7候補の接続契約・検証・本番反映条件は [移行記録](docs/prisma7-migration-2026-11-01.md) とAGENTS.mdを参照してください。

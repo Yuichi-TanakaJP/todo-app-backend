@@ -26,7 +26,8 @@ test('production entry loads a synthetic dotenv URL before client construction',
   try {
     const base=`http://127.0.0.1:${port}`;
     let ready=false;
-    for(let i=0;i<50;i++) {
+    for(let i=0;i<200;i++) {
+      assert.equal(child.exitCode,null,"production entry exited before becoming ready");
       try {const response=await fetch(base+'/api/health');if(response.status===200){ready=true;break;}}catch{}
       await new Promise(resolve=>setTimeout(resolve,50));
     }

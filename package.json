@@ -5,13 +5,14 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json && node scripts/write-native-ca.mjs && node scripts/check-native-runtime.mjs",
     "prisma:migrate": "prisma migrate deploy",
     "start": "node dist/index.js",
     "test": "npm run build && node --test tests/*.test.mjs",
     "test:db": "npm run build && node --test tests/prisma7.integration.mjs tests/startup.integration.mjs",
     "test:tls": "npm run build && node --test tests/prisma-tls.integration.mjs",
-    "db:check-config": "tsx scripts/check-database-config.ts"
+    "db:check-config": "tsx scripts/check-database-config.ts",
+    "test:binding": "npm run build && node --test tests/channel-binding.integration.mjs tests/native-timeout.integration.mjs tests/native-types.integration.mjs"
   },
   "keywords": [],
   "author": "",
@@ -36,5 +37,8 @@
   },
   "engines": {
     "node": ">=22.12.0 <23"
+  },
+  "optionalDependencies": {
+    "pg-native": "3.9.1"
   }
 }
