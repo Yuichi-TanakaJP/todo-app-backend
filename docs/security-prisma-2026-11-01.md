@@ -15,3 +15,5 @@ Express専用PRとは分離し、prisma/@prisma/clientを同major6.14.0から6.1
 マージ/配備は承認待ち。schema/migration変更なし。復旧はPrisma manifest/lockを対で復元しClient再生成/build、承認後再起動。Express更新を巻き戻さない差分で扱い、旧依存再導入を安全復旧と認定しない。
 
 公式: https://github.com/prisma/orm/releases/tag/6.19.3 、https://github.com/advisories/GHSA-ggr8-5vv4-36mx 。実施日2026-11-01 JST。audit証拠はC:/Users/yutaz/dev/_scratch/codex/2026-11-01/certifi-fix-01/todo-prisma-audit.json。
+
+追加の実DB検証: merge-treeでPR#4/#5の競合なしを確認し、branchはマージせず統合tree5c01ff7をscratchへ展開。localhost限定・volumeなしの一時Postgres17.6（既存image、合成データのみ）でschema同期、Prisma6.19.3 actual Client/query engineとactual routerのCRUD/異常入力/CORS回帰成功。試験後に当該containerを正常停止して自動削除。統合後auditはPrisma/@prisma/config/deepmergeの3highのみ。これは本番DB/公開API/配備版検証ではない。
